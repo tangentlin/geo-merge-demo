@@ -128,3 +128,7 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+secret.ts
+Blight_Violations-2024*.*
+Property_Sales-2024*.*
