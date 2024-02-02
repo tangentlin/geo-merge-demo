@@ -1,3 +1,4 @@
+import { Placekey } from '@placekey/placekey';
 import { FeatureCollection, Point } from 'geojson';
 
 export interface PropertySaleProps {
@@ -71,7 +72,7 @@ export type PropertySale = FeatureCollection<Point, PropertySaleProps>;
 export type BlightViolation = FeatureCollection<Point, BlightViolationProps>;
 
 export interface MergedProps {
-  placeKey: string;
+  placeKey: Placekey;
   violations: BlightViolationProps[];
   sales: PropertySaleProps[];
 }
