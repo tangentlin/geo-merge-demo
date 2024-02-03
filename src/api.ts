@@ -12,6 +12,7 @@ const pauseMsBetweenBatches = 60 * 1000;
 export async function getAddressPlaceKeyBulk(addresses: readonly Address[]): Promise<Placekey[]> {
   const placekeys: Placekey[] = [];
   const chunks = chunkArray(addresses, bulkSize);
+  console.log(`Processing ${addresses.length} addresses in ${chunks.length} chunks.`);
   const result: PlaceBulkItem[][] = await parallelProcessArrayWithRateLimit(
     chunks,
     callPlaceKey,
@@ -28,7 +29,11 @@ export async function getAddressPlaceKeyBulk(addresses: readonly Address[]): Pro
   return placekeys;
 }
 
-const getAddressPlaceKeyLoader = new DataLoader(getAddressPlaceKeyBulk);
+const getAddressPlaceKeyLoader = new DataLoader(getAddressPlaceKeyBulk, {
+  batchScheduleFn: (callback) => {
+    setTimeout(callback, 2500);
+  }
+});
 
 export async function getAddressPlaceKey(address: Address): Promise<Placekey> {
   return getAddressPlaceKeyLoader.load(address);
@@ -51,7 +56,6 @@ export function callPlaceKey(addresses: readonly Address[]): Promise<PlaceBulkIt
     queries: data
   };
 
-  console.log(payload);
   return axios
     .post<PlaceBulkItem[]>('https://api.placekey.io/v1/placekeys', JSON.stringify(payload), {
       headers: {

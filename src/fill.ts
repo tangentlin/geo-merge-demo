@@ -1,6 +1,6 @@
 import { Placekey } from '@placekey/placekey';
 import { FeatureCollection, Point } from 'geojson';
-import { getAddressPlaceKey } from './api';
+import { getAddressPlaceKeyBulk } from './api';
 import { Address, BlightViolationProps, MaybePlaceKey, PropertySaleProps } from './type';
 import { getPlaceKeyFromPoint, nextAddressId } from './util';
 
@@ -78,6 +78,14 @@ export async function fillPlaceKey<T>(
   }
 ): Promise<FeatureCollection<Point, MaybePlaceKey<T>>> {
   const len = geo.features.length;
+  const addresses: Address[] = [];
+  for (let i = 0; i < len; i++) {
+    const feature = geo.features[i];
+    const address = option.getAddress(feature.properties);
+    addresses.push(address);
+  }
+  const addressKeys = await getAddressPlaceKeyBulk(addresses);
+
   for (let i = 0; i < len; i++) {
     const feature = geo.features[i];
     if (feature.properties.placeKey != null) {
@@ -88,8 +96,7 @@ export async function fillPlaceKey<T>(
     if (feature.geometry != null) {
       latLongKey = getPlaceKeyFromPoint(feature.geometry);
     }
-    const address = option.getAddress(feature.properties);
-    const addressKey = await getAddressPlaceKey(address);
+    const addressKey = addressKeys[i];
     const placeKey = choosePlacekey(addressKey, latLongKey);
 
     feature.properties.placeKey = placeKey;

@@ -1,6 +1,14 @@
 import { Placekey } from '@placekey/placekey';
 import { Feature, FeatureCollection, Point } from 'geojson';
-import { BlightViolation, BlightViolationProps, Merged, MergedProps, PropertySale, PropertySaleProps } from './type';
+import {
+  BlightViolation,
+  BlightViolationProps,
+  MaybePlaceKey,
+  Merged,
+  MergedProps,
+  PropertySale,
+  PropertySaleProps
+} from './type';
 import { getPlaceKeyFromPoint } from './util';
 
 export function newSalesViolationProps(point: Point): MergedProps {
@@ -75,7 +83,7 @@ export function mergeGeo<T1, T2, MergeT>(
 }
 
 export function indexGeo<T, MergeT>(
-  geo: FeatureCollection<Point, T>,
+  geo: FeatureCollection<Point, MaybePlaceKey<T>>,
   index: Map<Placekey, Feature<Point, MergeT>>,
   option: {
     newMergeProps: (point: Point) => MergeT;
@@ -86,11 +94,11 @@ export function indexGeo<T, MergeT>(
   const len = geo.features.length;
   for (let i = 0; i < len; i++) {
     const feature = geo.features[i];
-    if (!feature.geometry) {
+    if (!feature.properties.placeKey) {
       option.onSkipped?.(feature, i);
       continue;
     }
-    const placeKey = getPlaceKeyFromPoint(feature.geometry);
+    const placeKey = feature.properties.placeKey;
     let merged: MergeT | undefined = index.get(placeKey)?.properties;
     if (!merged) {
       merged = option.newMergeProps(feature.geometry);

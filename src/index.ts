@@ -15,7 +15,7 @@ async function merge() {
   const violationFile = performFill ? violationRawFile : violationProcessedFile;
   const saleFile = performFill ? saleRawFile : saleProcessedFile;
 
-  if (1 > 2) {
+  if (1 > 0) {
     let sales = await readJsonFile<PropertySale>(saleFile);
     console.log(`Read ${sales.features.length.toLocaleString()} sales records.`);
 
