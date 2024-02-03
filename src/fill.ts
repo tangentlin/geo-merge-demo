@@ -1,11 +1,24 @@
 import { Placekey } from '@placekey/placekey';
 import { FeatureCollection, Point } from 'geojson';
 import { getAddressPlaceKeyBulk } from './api';
-import { Address, BlightViolationProps, MaybePlaceKey, PropertySaleProps } from './type';
+import {
+  Address,
+  BlightViolationProps,
+  MaybePlaceKey,
+  PropertySaleProps,
+  ResolutionConflict,
+  WithPlaceKey
+} from './type';
 import { getPlaceKeyFromPoint, nextAddressId } from './util';
 
-export function choosePlacekey(addressKey: Placekey, latLongKey?: Placekey): Placekey {
-  if (latLongKey == null || latLongKey === addressKey) {
+export function choosePlacekey(
+  addressKey: Placekey,
+  address: Address,
+  latLongKey: Placekey | undefined,
+  point: Point | undefined,
+  addPlaceKeyConflict: (conflict: ResolutionConflict) => void
+): Placekey {
+  if (point == null || latLongKey == null || latLongKey === addressKey) {
     return addressKey;
   }
 
@@ -18,6 +31,18 @@ export function choosePlacekey(addressKey: Placekey, latLongKey?: Placekey): Pla
   if (addressWhere === latLongWhere) {
     return addressKey;
   }
+
+  const conflict: ResolutionConflict = {
+    addressKey,
+    addressWhere: `@${addressWhere}`,
+    address,
+    latLongWhere: `@${latLongWhere}`,
+    latLong: {
+      latitude: point.coordinates[1],
+      longitude: point.coordinates[0]
+    }
+  };
+  addPlaceKeyConflict(conflict);
 
   return latLongKey;
 }
@@ -55,28 +80,13 @@ export function getBlightViolationAddress(props: BlightViolationProps): Address 
   };
 }
 
-export async function fillPropertySalePlaceKey(
-  sales: FeatureCollection<Point, MaybePlaceKey<PropertySaleProps>>
-): Promise<FeatureCollection<Point, MaybePlaceKey<PropertySaleProps>>> {
-  return fillPlaceKey(sales, {
-    getAddress: getPropertySaleAddress
-  });
-}
-
-export async function fillBlightViolationPlaceKey(
-  violations: FeatureCollection<Point, MaybePlaceKey<BlightViolationProps>>
-): Promise<FeatureCollection<Point, MaybePlaceKey<BlightViolationProps>>> {
-  return fillPlaceKey(violations, {
-    getAddress: getBlightViolationAddress
-  });
-}
-
 export async function fillPlaceKey<T>(
   geo: FeatureCollection<Point, MaybePlaceKey<T>>,
   option: {
     getAddress: (props: T) => Address;
+    addPlaceKeyConflict: (conflict: ResolutionConflict) => void;
   }
-): Promise<FeatureCollection<Point, MaybePlaceKey<T>>> {
+): Promise<FeatureCollection<Point, WithPlaceKey<T>>> {
   const len = geo.features.length;
   const addresses: Address[] = [];
   for (let i = 0; i < len; i++) {
@@ -97,9 +107,10 @@ export async function fillPlaceKey<T>(
       latLongKey = getPlaceKeyFromPoint(feature.geometry);
     }
     const addressKey = addressKeys[i];
-    const placeKey = choosePlacekey(addressKey, latLongKey);
+    const address = addresses[i];
+    const placeKey = choosePlacekey(addressKey, address, latLongKey, feature.geometry, option.addPlaceKeyConflict);
 
     feature.properties.placeKey = placeKey;
   }
-  return geo;
+  return geo as FeatureCollection<Point, WithPlaceKey<T>>;
 }

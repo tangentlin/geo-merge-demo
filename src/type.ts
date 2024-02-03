@@ -110,3 +110,15 @@ export interface PlaceBulkItem {
 }
 
 export type MaybePlaceKey<T> = T & { placeKey?: Placekey };
+export type WithPlaceKey<T> = T & { placeKey: Placekey };
+
+export interface ResolutionConflict {
+  addressKey: Placekey;
+  addressWhere: Placekey;
+  address: Address;
+  latLongWhere: Placekey;
+  latLong: {
+    latitude: number;
+    longitude: number;
+  };
+}

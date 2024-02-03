@@ -3,17 +3,16 @@ import { Feature, FeatureCollection, Point } from 'geojson';
 import {
   BlightViolation,
   BlightViolationProps,
-  MaybePlaceKey,
   Merged,
   MergedProps,
   PropertySale,
-  PropertySaleProps
+  PropertySaleProps,
+  WithPlaceKey
 } from './type';
-import { getPlaceKeyFromPoint } from './util';
 
-export function newSalesViolationProps(point: Point): MergedProps {
+export function newSalesViolationProps(feature: Feature<Point, WithPlaceKey<any>>): MergedProps {
   return {
-    placeKey: getPlaceKeyFromPoint(point),
+    placeKey: feature.properties.placeKey,
     violations: [],
     sales: []
   };
@@ -29,6 +28,7 @@ export function appendSale(merge: MergedProps, props: PropertySaleProps): void {
 
 export function mergeSalesViolations(sales: PropertySale, violations: BlightViolation): Merged {
   const skippedData = [];
+  // @ts-ignore
   const merged = mergeGeo(sales, violations, {
     newMergeProps: newSalesViolationProps,
     appendProp1: appendSale,
@@ -54,10 +54,10 @@ export function mergeSalesViolations(sales: PropertySale, violations: BlightViol
  * @returns
  */
 export function mergeGeo<T1, T2, MergeT>(
-  geo1: FeatureCollection<Point, T1>,
-  geo2: FeatureCollection<Point, T2>,
+  geo1: FeatureCollection<Point, WithPlaceKey<T1>>,
+  geo2: FeatureCollection<Point, WithPlaceKey<T2>>,
   option: {
-    newMergeProps: (point: Point) => MergeT;
+    newMergeProps: (feature: Feature<Point, WithPlaceKey<T1 | T2>>) => MergeT;
     appendProp1: (merge: MergeT, props: T1) => void;
     appendProp2: (merge: MergeT, props: T2) => void;
     onSkipped?: (data: any, index) => void;
@@ -83,10 +83,10 @@ export function mergeGeo<T1, T2, MergeT>(
 }
 
 export function indexGeo<T, MergeT>(
-  geo: FeatureCollection<Point, MaybePlaceKey<T>>,
+  geo: FeatureCollection<Point, WithPlaceKey<T>>,
   index: Map<Placekey, Feature<Point, MergeT>>,
   option: {
-    newMergeProps: (point: Point) => MergeT;
+    newMergeProps: (point: Feature<Point, WithPlaceKey<T>>) => MergeT;
     append: (merge: MergeT, props: T) => void;
     onSkipped?: (data: any, index) => void;
   }
@@ -101,7 +101,7 @@ export function indexGeo<T, MergeT>(
     const placeKey = feature.properties.placeKey;
     let merged: MergeT | undefined = index.get(placeKey)?.properties;
     if (!merged) {
-      merged = option.newMergeProps(feature.geometry);
+      merged = option.newMergeProps(feature);
       const mergedFeature: Feature<Point, MergeT> = {
         type: 'Feature',
         geometry: feature.geometry,

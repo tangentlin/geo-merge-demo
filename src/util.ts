@@ -1,6 +1,6 @@
 import { Placekey, geoToPlacekey } from '@placekey/placekey';
 import { createParseStream } from 'big-json';
-import { ReadStream, createReadStream, createWriteStream, existsSync, unlinkSync } from 'fs';
+import { ReadStream, createReadStream, createWriteStream, existsSync, unlinkSync, writeFileSync } from 'fs';
 import { FeatureCollection, Point } from 'geojson';
 import memoize from 'micro-memoize';
 
@@ -67,6 +67,11 @@ export function chunkArray<T>(array: readonly T[], size: number): T[][] {
   return result;
 }
 
+export function writeSimpleJsonFile<T>(path: string, data: T): void {
+  const json = stringify(data);
+  writeFileSync(path, json);
+}
+
 export async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -99,8 +104,12 @@ export function nextAddressId(): string {
   return addressId.toString();
 }
 
-export const getPLaceKey = memoize(geoToPlacekey);
+export const getPlaceKey = memoize(geoToPlacekey);
+
+export function getPlaceKeyFromXY(x: number, y: number): Placekey {
+  return getPlaceKey(y, x);
+}
 
 export function getPlaceKeyFromPoint(point: Point): Placekey {
-  return getPLaceKey(point.coordinates[0], point.coordinates[1]);
+  return getPlaceKeyFromXY(point.coordinates[0], point.coordinates[1]);
 }

@@ -6,7 +6,7 @@ import { Address, PlaceBulkItem } from './type';
 import { chunkArray, sleep } from './util';
 
 const bulkSize = 100;
-const maxCallsPerMinute = 10; // Use 10 instead of 1000 to be safe
+const maxCallsPerMinute = 99; // Use 500 instead of 1000 to be safe
 const pauseMsBetweenBatches = 60 * 1000;
 
 export interface RateLimitCallOption {
