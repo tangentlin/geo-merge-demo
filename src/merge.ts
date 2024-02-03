@@ -20,11 +20,22 @@ export function appendSale(merge: MergedProps, props: PropertySaleProps): void {
 }
 
 export function mergeSalesViolations(sales: PropertySale, violations: BlightViolation): Merged {
-  return mergeGeo(sales, violations, {
+  const skippedData = [];
+  const merged = mergeGeo(sales, violations, {
     newMergeProps: newSalesViolationProps,
     appendProp1: appendSale,
-    appendProp2: appendViolation
+    appendProp2: appendViolation,
+    onSkipped: (data, index) => {
+      skippedData.push(data);
+    }
   });
+
+  if (skippedData.length > 0) {
+    console.log(`Skipped ${skippedData.length.toLocaleString()} records.`);
+    console.log(`Sample skipped data: ${JSON.stringify(skippedData[0], null, 2)}`);
+  }
+
+  return merged;
 }
 
 /**
@@ -41,17 +52,20 @@ export function mergeGeo<T1, T2, MergeT>(
     newMergeProps: (point: Point) => MergeT;
     appendProp1: (merge: MergeT, props: T1) => void;
     appendProp2: (merge: MergeT, props: T2) => void;
+    onSkipped?: (data: any, index) => void;
   }
 ): FeatureCollection<Point, MergeT> {
   const merged = new Map<Placekey, Feature<Point, MergeT>>();
   indexGeo(geo1, merged, {
     newMergeProps: option.newMergeProps,
-    append: option.appendProp1
+    append: option.appendProp1,
+    onSkipped: option.onSkipped
   });
 
   indexGeo(geo2, merged, {
     newMergeProps: option.newMergeProps,
-    append: option.appendProp2
+    append: option.appendProp2,
+    onSkipped: option.onSkipped
   });
 
   return {
@@ -66,9 +80,16 @@ export function indexGeo<T, MergeT>(
   option: {
     newMergeProps: (point: Point) => MergeT;
     append: (merge: MergeT, props: T) => void;
+    onSkipped?: (data: any, index) => void;
   }
 ): void {
-  for (const feature of geo.features) {
+  const len = geo.features.length;
+  for (let i = 0; i < len; i++) {
+    const feature = geo.features[i];
+    if (!feature.geometry) {
+      option.onSkipped?.(feature, i);
+      continue;
+    }
     const placeKey = getPlaceKeyFromPoint(feature.geometry);
     let merged: MergeT | undefined = index.get(placeKey)?.properties;
     if (!merged) {
