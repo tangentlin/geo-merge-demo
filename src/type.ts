@@ -68,8 +68,8 @@ export interface BlightViolationProps {
   updated_at: string;
 }
 
-export type PropertySale = FeatureCollection<Point, PropertySaleProps>;
-export type BlightViolation = FeatureCollection<Point, BlightViolationProps>;
+export type PropertySale = FeatureCollection<Point, MaybePlaceKey<PropertySaleProps>>;
+export type BlightViolation = FeatureCollection<Point, MaybePlaceKey<BlightViolationProps>>;
 
 export interface MergedProps {
   placeKey: Placekey;
@@ -108,3 +108,5 @@ export interface PlaceBulkItem {
   query_id: string;
   placekey: string;
 }
+
+export type MaybePlaceKey<T> = T & { placeKey?: Placekey };

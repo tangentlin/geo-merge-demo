@@ -1,6 +1,8 @@
+import { Placekey, geoToPlacekey } from '@placekey/placekey';
 import { createParseStream } from 'big-json';
 import { ReadStream, createReadStream, createWriteStream, existsSync, unlinkSync } from 'fs';
 import { FeatureCollection, Point } from 'geojson';
+import memoize from 'micro-memoize';
 
 export async function readJsonFile<T>(path: string): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -95,4 +97,10 @@ let addressId = 0;
 export function nextAddressId(): string {
   addressId++;
   return addressId.toString();
+}
+
+export const getPLaceKey = memoize(geoToPlacekey);
+
+export function getPlaceKeyFromPoint(point: Point): Placekey {
+  return getPLaceKey(point.coordinates[0], point.coordinates[1]);
 }

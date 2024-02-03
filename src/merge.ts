@@ -1,7 +1,7 @@
-import { Placekey, geoToPlacekey } from '@placekey/placekey';
+import { Placekey } from '@placekey/placekey';
 import { Feature, FeatureCollection, Point } from 'geojson';
-import memoize from 'micro-memoize';
 import { BlightViolation, BlightViolationProps, Merged, MergedProps, PropertySale, PropertySaleProps } from './type';
+import { getPlaceKeyFromPoint } from './util';
 
 export function newSalesViolationProps(point: Point): MergedProps {
   return {
@@ -103,10 +103,4 @@ export function indexGeo<T, MergeT>(
     }
     option.append(merged, feature.properties);
   }
-}
-
-export const getPLaceKey = memoize(geoToPlacekey);
-
-export function getPlaceKeyFromPoint(point: Point): Placekey {
-  return getPLaceKey(point.coordinates[0], point.coordinates[1]);
 }
