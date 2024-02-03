@@ -3,22 +3,32 @@ import axios from 'axios';
 import DataLoader from 'dataloader';
 import { PlaceKeyApiKey } from './secret';
 import { Address, PlaceBulkItem } from './type';
-import { chunkArray } from './util';
+import { chunkArray, sleep } from './util';
 
 const bulkSize = 100;
-const maxCallsPerMinute = 1000;
+const maxCallsPerMinute = 10; // Use 10 instead of 1000 to be safe
 const pauseMsBetweenBatches = 60 * 1000;
+
+export interface RateLimitCallOption {
+  /**
+   * The maximum number of calls allowed per minute.
+   */
+  limit: number;
+
+  /**
+   * The time interval in milliseconds to wait between batches.
+   */
+  interval: number;
+}
 
 export async function getAddressPlaceKeyBulk(addresses: readonly Address[]): Promise<Placekey[]> {
   const placekeys: Placekey[] = [];
   const chunks = chunkArray(addresses, bulkSize);
   console.log(`Processing ${addresses.length} addresses in ${chunks.length} chunks.`);
-  const result: PlaceBulkItem[][] = await parallelProcessArrayWithRateLimit(
-    chunks,
-    callPlaceKey,
-    maxCallsPerMinute,
-    pauseMsBetweenBatches
-  );
+  const result: PlaceBulkItem[][] = await sequentialProcessArrayWithRateLimit(chunks, callPlaceKey, {
+    limit: maxCallsPerMinute,
+    interval: pauseMsBetweenBatches
+  });
   const flatResult: Map<string, Placekey> = new Map(result.flat().map((item) => [item.query_id, item.placekey]));
   for (const address of addresses) {
     const placekey = flatResult.get(address.id);
@@ -69,9 +79,9 @@ export function callPlaceKey(addresses: readonly Address[]): Promise<PlaceBulkIt
 export async function parallelProcessArrayWithRateLimit<T, R>(
   dataArray: T[],
   processFunction: (dataItem: T) => Promise<R>,
-  limit: number = 1000,
-  interval: number = 60000 // 60000 milliseconds = 1 minute
+  options: RateLimitCallOption
 ): Promise<R[]> {
+  const { limit, interval } = options;
   let results: R[] = [];
   let batches: Promise<R>[][] = [];
 
@@ -91,7 +101,7 @@ export async function parallelProcessArrayWithRateLimit<T, R>(
       // Wait between batches but not after the last one
       if (index < batches.length - 1) {
         console.log(`Waiting for ${interval / 1000} seconds to respect the rate limit.`);
-        await new Promise((resolve) => setTimeout(resolve, interval));
+        await sleep(interval);
       }
     } catch (error) {
       console.error(`Error processing batch ${index + 1}:`, error);
@@ -106,9 +116,9 @@ export async function parallelProcessArrayWithRateLimit<T, R>(
 export async function sequentialProcessArrayWithRateLimit<T, R>(
   dataArray: T[],
   processFunction: (dataItem: T) => Promise<R>,
-  limit: number = 1000,
-  interval: number = 60000 // 60000 milliseconds = 1 minute
+  options: RateLimitCallOption
 ): Promise<R[]> {
+  const { limit, interval } = options;
   const results: R[] = [];
   let counter = 0;
 
@@ -116,7 +126,7 @@ export async function sequentialProcessArrayWithRateLimit<T, R>(
     // Check if the limit is reached
     if (counter >= limit) {
       console.log(`Rate limit reached, waiting for ${interval / 1000} seconds.`);
-      await new Promise((resolve) => setTimeout(resolve, interval)); // Wait for the specified interval
+      await sleep(interval);
       counter = 0; // Reset the counter after waiting
     }
 
