@@ -90,3 +90,9 @@ export function trimEnd(s: string, character: string, maxOccurrence: number = 1)
   }
   return result;
 }
+
+let addressId = 0;
+export function nextAddressId(): string {
+  addressId++;
+  return addressId.toString();
+}

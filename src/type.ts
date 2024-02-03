@@ -90,6 +90,7 @@ export interface Failed<T> {
 }
 
 export interface Address {
+  id: string;
   streetAddress: string;
   city: string;
   /**
@@ -101,4 +102,9 @@ export interface Address {
    */
   county: string;
   zip?: string;
+}
+
+export interface PlaceBulkItem {
+  query_id: string;
+  placekey: string;
 }
