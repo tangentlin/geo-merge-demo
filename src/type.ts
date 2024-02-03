@@ -88,3 +88,17 @@ export interface Failed<T> {
   geometry: Point;
   featureIndex: number;
 }
+
+export interface Address {
+  streetAddress: string;
+  city: string;
+  /**
+   * State code
+   */
+  region: string;
+  /**
+   * ISO 3166-1 alpha-2 country code
+   */
+  county: string;
+  zip?: string;
+}
