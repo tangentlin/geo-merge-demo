@@ -1,6 +1,5 @@
 import { Placekey } from '@placekey/placekey';
 import axios from 'axios';
-import DataLoader from 'dataloader';
 import { PlaceKeyApiKey } from './secret';
 import { Address, PlaceBulkItem } from './type';
 import { chunkArray, sleep } from './util';
@@ -39,16 +38,6 @@ export async function getAddressPlaceKeyBulk(addresses: readonly Address[]): Pro
   return placekeys;
 }
 
-const getAddressPlaceKeyLoader = new DataLoader(getAddressPlaceKeyBulk, {
-  batchScheduleFn: (callback) => {
-    setTimeout(callback, 2500);
-  }
-});
-
-export async function getAddressPlaceKey(address: Address): Promise<Placekey> {
-  return getAddressPlaceKeyLoader.load(address);
-}
-
 export function callPlaceKey(addresses: readonly Address[]): Promise<PlaceBulkItem[]> {
   const data = addresses.map((address) => {
     const result = {
@@ -76,6 +65,19 @@ export function callPlaceKey(addresses: readonly Address[]): Promise<PlaceBulkIt
     .then((response) => response.data);
 }
 
+/**
+ * Process data by making parallel calls within a rate limit,
+ * waiting between batches to respect the rate limit.
+ *
+ * However, this function is not used in the final implementation due
+ * to a possible bug that the Placekey API returns 429 errors even with
+ * fewer than 10 parallel requests.
+ *
+ * @param dataArray
+ * @param processFunction
+ * @param options
+ * @returns
+ */
 export async function parallelProcessArrayWithRateLimit<T, R>(
   dataArray: T[],
   processFunction: (dataItem: T) => Promise<R>,
@@ -113,6 +115,15 @@ export async function parallelProcessArrayWithRateLimit<T, R>(
   return results;
 }
 
+/**
+ * Make sequential calls to process data within a rate limit,
+ * waiting between calls to respect the rate limit.
+ *
+ * @param dataArray
+ * @param processFunction
+ * @param options
+ * @returns
+ */
 export async function sequentialProcessArrayWithRateLimit<T, R>(
   dataArray: T[],
   processFunction: (dataItem: T) => Promise<R>,
